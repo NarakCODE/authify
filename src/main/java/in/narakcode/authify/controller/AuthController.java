@@ -2,8 +2,11 @@ package in.narakcode.authify.controller;
 
 import in.narakcode.authify.dto.AuthRequest;
 import in.narakcode.authify.dto.AuthResponse;
+import in.narakcode.authify.dto.ResetPasswordRequest;
 import in.narakcode.authify.service.ProfileService;
 import in.narakcode.authify.util.JwtUtil;
+import jakarta.validation.Valid;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -85,7 +88,6 @@ public class AuthController {
     return ResponseEntity.ok(email != null);
   }
 
-
   @PostMapping("/send-reset-otp")
   public void sendResetOtp(@RequestParam String email) {
     try {
@@ -95,6 +97,13 @@ public class AuthController {
     }
   }
 
-
+  @PostMapping("/reset-password")
+  public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    try {
+      profileService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+    } catch (Exception e) {
+      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+    }
+  }
 
 }

@@ -7,6 +7,9 @@ import in.narakcode.authify.repository.UserRepository;
 import in.narakcode.authify.service.EmailService;
 import in.narakcode.authify.service.ProfileService;
 import lombok.RequiredArgsConstructor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +27,7 @@ public class ProfileServiceImpl implements ProfileService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final EmailService emailService;
+  private static final Logger log = LoggerFactory.getLogger(ProfileServiceImpl.class);
 
   @Override
   public ProfileResponse getProfile(String email) {
@@ -77,13 +81,49 @@ public class ProfileServiceImpl implements ProfileService {
     userRepository.save(existingUser);
 
     try {
-      // TODO: Send OTP via email
       emailService.sendResetOtpEmail(email, otp);
     } catch (Exception e) {
-      // TODO: handle exception
       throw new RuntimeException("Unable to send mail");
     }
 
+  }
+
+  @Transactional
+  @Override
+  public void resetPassword(String email, String otp, String newPassword) {
+    UserEntity existingUser = userRepository.findByEmail(email)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found" + email));
+
+    // Validate the provided OTP
+    if (existingUser.getResetOtp() == null || !existingUser.getResetOtp().equals(otp)) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP");
+    }
+
+    // Chcek if the OTP has expired
+    if (System.currentTimeMillis() > existingUser.getResetOtpExpireAt()) {
+      // Invalidate the OTP
+      existingUser.setResetOtp(otp);
+      existingUser.setResetOtpExpireAt(0L);
+      userRepository.save(existingUser);
+
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP has expired");
+    }
+
+    // OTP is valid, proceed with password reset
+    existingUser.setPassword(passwordEncoder.encode(newPassword));
+
+    // Invalidate the OTP after successful reset
+    existingUser.setResetOtp(null);
+    existingUser.setResetOtpExpireAt(0L);
+    userRepository.save(existingUser);
+
+    // Send a confirmation email
+    try {
+      emailService.sendPasswordResetSuccessEmail(existingUser.getEmail(), existingUser.getName());
+
+    } catch (Exception e) {
+      log.warn("Unable to send password reset confirmation email to {}: {}", email, e.getMessage());
+    }
   }
 
 }
