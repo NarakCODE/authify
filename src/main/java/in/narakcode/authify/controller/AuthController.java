@@ -37,6 +37,13 @@ public class AuthController {
   private final JwtUtil jwtUtil;
   private final ProfileService profileService;
 
+  // Auto-detect if running on Railway or production (HTTPS)
+  private boolean isProduction() {
+    String railwayEnv = System.getenv("RAILWAY_ENVIRONMENT");
+    String profile = System.getenv("SPRING_PROFILES_ACTIVE");
+    return railwayEnv != null || "prod".equals(profile);
+  }
+
   @PostMapping("/login")
   public ResponseEntity<?> login(@RequestBody AuthRequest request) {
 
@@ -49,7 +56,7 @@ public class AuthController {
           .path("/")
           .maxAge(Duration.ofDays(1))
           .sameSite("Strict")
-          .secure(false) // Set to true in production with HTTPS
+          .secure(isProduction()) // Auto-detects Railway/production
           .build();
 
       return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -113,7 +120,7 @@ public class AuthController {
         .path("/")
         .maxAge(0)
         .sameSite("Strict")
-        .secure(false) // Set to true in production with HTTPS
+        .secure(isProduction()) // Auto-detects Railway/production
         .build();
 
     return ResponseEntity.ok()
