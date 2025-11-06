@@ -130,7 +130,8 @@ public class ProfileServiceImpl implements ProfileService {
   @Override
   public void sendOtp(String email) {
     UserEntity existingUser = userRepository.findByEmail(email)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+            "No account found with this email address"));
 
     // If account is already verified, don't send OTP
     if (Boolean.TRUE.equals(existingUser.getIsAccountVerified())) {
@@ -140,8 +141,8 @@ public class ProfileServiceImpl implements ProfileService {
     // Generate 6 digit OTP
     String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
 
-    // Calculate expiration time (current time + 24 hours in milliseconds)
-    long expirationTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000);
+    // Calculate expiration time (current time + 15 minutes in milliseconds)
+    long expirationTime = System.currentTimeMillis() + (15 * 60 * 1000);
 
     // Update the user entity
     existingUser.setVerifyOtp(otp);
@@ -161,7 +162,8 @@ public class ProfileServiceImpl implements ProfileService {
   @Override
   public void verifyOtp(String email, String otp) {
     UserEntity existingUser = userRepository.findByEmail(email)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+            "No account found with this email address"));
 
     // Check if already verified
     if (Boolean.TRUE.equals(existingUser.getIsAccountVerified())) {
@@ -183,6 +185,13 @@ public class ProfileServiceImpl implements ProfileService {
     existingUser.setVerifyOtp(null);
     existingUser.setVerifyOtpExpireAt(0L);
     userRepository.save(existingUser);
+
+    // Send welcome email after successful verification
+    try {
+      emailService.sendWelcomeEmail(existingUser.getEmail(), existingUser.getName());
+    } catch (Exception e) {
+      log.warn("Unable to send welcome email to {}: {}", email, e.getMessage());
+    }
   }
 
   @Override

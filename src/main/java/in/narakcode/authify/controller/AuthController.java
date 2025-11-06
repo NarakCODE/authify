@@ -71,8 +71,8 @@ public class AuthController {
     } catch (DisabledException ex) {
       Map<String, Object> error = new HashMap<>();
       error.put("error", true);
-      error.put("message", "Account is disabled");
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+      error.put("message", "Account is not verified. Please verify your email address");
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
 
     } catch (Exception ex) {
       Map<String, Object> error = new HashMap<>();
@@ -106,11 +106,11 @@ public class AuthController {
     return ResponseEntity.ok("Password reset successfully");
   }
 
-  @PostMapping("/send-otp")
-  public ResponseEntity<String> sendVerifyOtp(
-      @CurrentSecurityContext(expression = "authentication?.name") String email) {
-    profileService.sendOtp(email);
-    return ResponseEntity.ok("OTP sent successfully");
+  @PostMapping("/resend-verification-otp")
+  public ResponseEntity<String> resendVerificationOtp(
+      @Valid @RequestBody in.narakcode.authify.dto.ResendOtpRequest request) {
+    profileService.sendOtp(request.getEmail());
+    return ResponseEntity.ok("Verification OTP sent successfully");
   }
 
   @PostMapping("/logout")

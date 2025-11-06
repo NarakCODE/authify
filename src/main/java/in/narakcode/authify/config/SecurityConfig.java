@@ -51,7 +51,7 @@ public class SecurityConfig {
         // Define which endpoints are publicly accessible
         .authorizeHttpRequests(
             auth -> auth.requestMatchers("/login", "/register", "/send-reset-otp",
-                "/reset-password", "/logout").permitAll()
+                "/reset-password", "/logout", "/resend-verification-otp", "/verify-account").permitAll()
                 .anyRequest().authenticated())
         .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
 
@@ -97,7 +97,7 @@ public class SecurityConfig {
    */
   private UrlBasedCorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOrigins(List.of("http://localhost:5173")); // frontend origin
+    config.setAllowedOrigins(List.of("http://localhost:3000")); // frontend origin
     config.setAllowedMethods(
         List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")); // allowed HTTP methods
     config.setAllowedHeaders(

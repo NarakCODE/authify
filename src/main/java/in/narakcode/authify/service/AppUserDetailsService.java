@@ -23,10 +23,13 @@ public class AppUserDetailsService implements UserDetailsService {
     UserEntity existingUser = userRepository.findByEmail(email).orElseThrow(
         () -> new UsernameNotFoundException("Invalid email or password"));
 
+    // Check if account is verified - prevent login if not verified
+    boolean isEnabled = Boolean.TRUE.equals(existingUser.getIsAccountVerified());
+
     return new User(
         existingUser.getEmail(),
         existingUser.getPassword(),
-        true, // enabled - allow login even if not verified
+        isEnabled, // enabled only if account is verified
         true, // accountNonExpired
         true, // credentialsNonExpired
         true, // accountNonLocked
