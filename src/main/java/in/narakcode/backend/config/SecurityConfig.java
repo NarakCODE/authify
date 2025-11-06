@@ -1,6 +1,7 @@
 package in.narakcode.backend.config;
 
 import in.narakcode.backend.filter.JwtRequestFilter;
+import in.narakcode.backend.filter.RateLimitFilter;
 import in.narakcode.backend.service.AppUserDetailsService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class SecurityConfig {
 
   private final AppUserDetailsService appUserDetailsService;
   private final JwtRequestFilter jwtRequestFilter;
+  private final RateLimitFilter rateLimitFilter;
   private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
   @Value("${frontend.url.dev:http://localhost:3000}")
@@ -65,7 +67,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated())
         .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
 
-        // Add JWT filter before UsernamePasswordAuthenticationFilter
+        // Add rate limit filter first, then JWT filter
+        .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
 
         // Configure session management to be stateless (typical for REST APIs)
@@ -108,9 +111,8 @@ public class SecurityConfig {
   private UrlBasedCorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();
 
-    // Dynamically set allowed origin based on environment
-    String allowedOrigin = "prod".equals(activeProfile) ? frontendUrlProd : frontendUrlDev;
-    config.setAllowedOrigins(List.of(allowedOrigin));
+    // Allow both dev and prod origins for flexibility
+    config.setAllowedOrigins(List.of(frontendUrlDev, frontendUrlProd));
 
     config.setAllowedMethods(
         List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")); // allowed HTTP methods
